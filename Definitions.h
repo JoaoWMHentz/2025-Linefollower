@@ -4,8 +4,7 @@
 //Motors
 
 #define IN1 21
-#define IN2 22
-#define IN3 25
+#define IN2 22#define IN3 25
 #define IN4 23
 
 #define SUC_1 15
@@ -23,8 +22,8 @@
 #define S_OUT 13
 #define S_BIT 4
 #define S_QTD 16
-#define CALIB_RUNS 4 
-const int S_PINS[4] = { 19, 18, 17, 16 };
+#define CALIB_RUNS 32
+const int S_PINS[4] = { 18, 19, 16, 17 };
 
 const int S_WEIGHT[16] = { -8, -7 ,-6 ,-5 ,-4 ,-3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8 };
 

@@ -10,6 +10,8 @@ struct SensorCalibration {
   uint16_t blackThreshold;  // Limite para cor preta
 };
 
+uint8_t sensorSequence[S_QTD] = {0,2,1,3,4,6,5,7,8,10,9,11,12,14,13,15};
+
 class JsumoSensor {
 public:
   SensorCalibration sensors[S_QTD];
@@ -24,9 +26,9 @@ public:
 
   uint16_t readSensor(uint8_t sensor) {
     for (uint8_t i = 0; i < S_BIT; i++) {
-      digitalWrite(S_PINS[i], (int)bitRead(sensor, i));
+      digitalWrite(S_PINS[i], (int)bitRead(sensorSequence[sensor], i));
     }
-    return analogRead(S_OUT);
+    return analogRead(S_OUT)/10;
   }
 
   void calibrateAllSensors() {
@@ -35,11 +37,11 @@ public:
       for (uint8_t j = 0; j < S_QTD; j++) {
         sensorReads[j] += readSensor(j);
       }
-      delay(100);
+      delay(200);
     }
     for (uint8_t k = 0; k < S_QTD; k++) {
       sensorReads[k] = sensorReads[k] / CALIB_RUNS;
-      sensors[k].whiteThreshold = sensorReads[k] + (sensorReads[k] * 0.2);
+      sensors[k].whiteThreshold = sensorReads[k] + (sensorReads[k] * 0.75);
     }
   }
 

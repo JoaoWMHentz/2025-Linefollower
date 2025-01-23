@@ -85,10 +85,10 @@ public:
 	}
 
 	void brake() {
-		ledcWrite(PWM_CHN_1, 0);
-		ledcWrite(PWM_CHN_2, 0);
-		ledcWrite(PWM_CHN_3, 0);
-		ledcWrite(PWM_CHN_4, 0);
+		ledcWrite(PWM_CHN_1, 1023);
+		ledcWrite(PWM_CHN_2, 1023);
+		ledcWrite(PWM_CHN_3, 1023);
+		ledcWrite(PWM_CHN_4, 1023);
 	}
 
   void setupEncoder(){
