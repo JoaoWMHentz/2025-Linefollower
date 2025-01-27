@@ -60,7 +60,7 @@ void printWhiteThresholds() {
 }
 
 void loop() {
-  //debugLoop();
+  debugLoop();
   robotLoop();
 }
 
@@ -69,8 +69,8 @@ void debugLoop(){
     Serial.print(sensor.isWhite(i));
     Serial.print(" ");
   }
+  Serial.print(sensor.calculateOffset());
   Serial.println();
-  delay(100);
 }
 
 void robotLoop() {
@@ -89,7 +89,7 @@ void robotLoop() {
     locomotion.motorControl(blt.PWM + -output, blt.PWM + output);
   } else {
     locomotion.motorControl(0, 0);
-    //locomotion.brake();
+    locomotion.brake();
     locomotion.ledControl(0, 0, 0);
     locomotion.setPotSuc(0);
   }

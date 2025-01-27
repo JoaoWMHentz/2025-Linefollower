@@ -1,3 +1,4 @@
+#include "esp32-hal.h"
 #ifndef LOCOMOTION.H
 #define LOCOMOTION.H
 
@@ -14,6 +15,10 @@ public:
 
   int leftEncoderVirtualCount = 0;
   int rightEncoderVirtualCount = 0;
+
+  long brakeTimer = 0;
+  uint16_t targetVelocityRight = 0;
+  uint16_t targetVelocityLeft = 0;
 
   int16_t leftEncoderLastCount = 0;
   int16_t rightEncoderLastCount = 0;
@@ -82,13 +87,18 @@ public:
 			ledcWrite(PWM_CHN_4, speedRight);
 			ledcWrite(PWM_CHN_3, 0);
 		}
+    targetVelocityRight = speedRight < 0 ? -speedRight : speedRight; 
+    targetVelocityLeft = speedLeft < 0 ? -speedLeft : speedLeft; 
 	}
 
 	void brake() {
-		ledcWrite(PWM_CHN_1, 1023);
-		ledcWrite(PWM_CHN_2, 1023);
-		ledcWrite(PWM_CHN_3, 1023);
-		ledcWrite(PWM_CHN_4, 1023);
+    if((millis() - brakeTimer) > 100){
+      if(targetVelocityLeft > 0 || targetVelocityRight > 0){
+        motorControl(targetVelocityLeft - 20, targetVelocityRight - 20);
+      }else{
+        motorControl(0,0);
+      }
+    }
 	}
 
   void setupEncoder(){
