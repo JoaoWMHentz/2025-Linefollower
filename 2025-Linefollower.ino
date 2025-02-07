@@ -1,34 +1,36 @@
-#include "PID.h"
-#include "Locomotion.h"
+#include "ControlUnit.h"
+#include "LocomotionUnit.h"
 #include "Definitions.h"
-#include "JsumoSensor.h"
-#include "BltCommands.h"
+#include "SensorUnit.h"
+#include "PeripheralUnit.h"
 #include <BluetoothSerial.h>
 
-#define BUTTON_PIN 4  // Defina o pino do botão
+#define BUTTON_PIN 4
 
-Locomotion locomotion = Locomotion();
-JsumoSensor sensor = JsumoSensor();
-PID pid = PID();
-BltCommands blt = BltCommands();
+LocomotionUnit locomotion = LocomotionUnit();
+SensorUnit sensor = SensorUnit();
+ControlUnit pid = ControlUnit();
+PeripheralUnit blt = PeripheralUnit();
 TaskHandle_t BLTReadHandle;
 long timePID = 0;
-bool robotRunning = false;    // Estado atual do robô
-bool lastButtonState = HIGH;  // Estado anterior do botão
+bool robotRunning = false;
+bool lastButtonState = HIGH;
+unsigned long runTime = 0;
+
+bool initialValue = 1;
 
 void setupRobotTask() {
-  // Criação da tarefa de leitura dos sensores do robô
-  xTaskCreatePinnedToCore(
-    robotSecundaryTask,  // Função da tarefa
-    "BLTRead",           // Nome da tarefa
-    10000,               // Tamanho da memória da tarefa
-    NULL,                // Parâmetros
-    1,                   // Prioridade
-    &BLTReadHandle,      // Handler da tarefa
-    1                    // Core onde a tarefa está pendurada (0 ou 1)
-  );
 
-  delay(200);  // Delay para iniciar as tarefas corretamente
+  xTaskCreatePinnedToCore(
+    robotSecundaryTask,
+    "BLTRead",
+    10000,
+    NULL,
+    1,
+    &BLTReadHandle,
+    1);
+
+  delay(200);
 }
 
 void setup() {
@@ -43,10 +45,10 @@ void setup() {
   locomotion.setupSuc();
   locomotion.setupEncoder();
   blt.begin();
-  setupRobotTask();
-  printWhiteThresholds();
 
-  pinMode(BUTTON_PIN, INPUT_PULLUP);  // Configura o botão com resistor pull-up interno
+  blt.initializeSPIFFS();
+  setupRobotTask();
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
 }
 
 void printWhiteThresholds() {
@@ -60,26 +62,33 @@ void printWhiteThresholds() {
 }
 
 void loop() {
-  debugLoop();
+  //debugEncoder();
   robotLoop();
 }
 
-void debugLoop(){
-  for (uint8_t i = 0; i < S_QTD; i++){
-    Serial.print(sensor.isWhite(i));
+void debugEncoder() {
+  Serial.print(locomotion.readLeftEncoder());
+  Serial.print(":");
+  Serial.println(locomotion.readRightEncoder());
+  delay(100);
+}
+
+void debugLoop() {
+  for (uint8_t i = 0; i < S_QTD; i++) {
+    Serial.print(sensor.readSensor(i)); 
     Serial.print(" ");
   }
   Serial.print(sensor.calculateOffset());
   Serial.println();
+  delay(20);
 }
 
 void robotLoop() {
-  bool robotRUn = blt.getRobotRun();
-  //locomotion.motorControl(500, 500);
-  if (robotRUn) {
+  robotRunning = blt.getRobotRun();
+
+  if (robotRunning) {
     locomotion.ledControl(0, 0, 1);
     locomotion.setPotSuc(blt.PotSuc);
-    timePID = millis();
     pid.KD = blt.Kd;
     pid.KP = blt.Kp;
     pid.KI = blt.Ki;
@@ -89,7 +98,6 @@ void robotLoop() {
     locomotion.motorControl(blt.PWM + -output, blt.PWM + output);
   } else {
     locomotion.motorControl(0, 0);
-    locomotion.brake();
     locomotion.ledControl(0, 0, 0);
     locomotion.setPotSuc(0);
   }
@@ -97,6 +105,19 @@ void robotLoop() {
 
 void robotSecundaryTask(void* pvParameters) {
   for (;;) {
-    blt.robotBLT();
+    //blt.robotBLT();
+    if ((millis() - runTime) >= 10 && robotRunning) {
+      
+      runTime = millis();
+      if(initialValue){
+        locomotion.resetEncoders();
+        initialValue = 0;
+      }
+      int leftEncoder = locomotion.readLeftEncoder();
+      int rightEncoder = locomotion.readRightEncoder();
+      blt.recordRobotEncoder(leftEncoder, rightEncoder );
+    }
   }
 }
+
+

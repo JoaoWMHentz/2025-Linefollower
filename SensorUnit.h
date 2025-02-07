@@ -1,7 +1,6 @@
-#ifndef JSUMOSENSOR.H
-#define JSUMOSENSOR .H
+#ifndef SENSORUNIT.H
+#define SENSORUNIT .H
 
-#include "JsumoSensor.h"
 #include "Definitions.h"
 #include <Arduino.h>
 
@@ -12,7 +11,7 @@ struct SensorCalibration {
 
 //uint8_t sensorSequence[S_QTD] = {0,2,1,3,4,6,5,7,8,10,9,11,12,14,13,15};
 
-class JsumoSensor {
+class SensorUnit {
 public:
   SensorCalibration sensors[S_QTD];
   
@@ -25,10 +24,13 @@ public:
   }
 
   uint16_t readSensor(uint8_t sensor) {
-    for (uint8_t i = 0; i < S_BIT; i++) {
-      digitalWrite(S_PINS[i], (int)bitRead(sensor, i));
-    }
-    return analogRead(S_OUT)/10;
+    digitalWrite(S_PINS[0], (int)bitRead(sensor, 0));
+    digitalWrite(S_PINS[1], (int)bitRead(sensor, 1));
+    digitalWrite(S_PINS[2], (int)bitRead(sensor, 2));
+    digitalWrite(S_PINS[3], (int)bitRead(sensor, 3));
+    int read = analogRead(S_OUT);
+    read = read == 0 ? 0 : (read / 10);
+    return read == 0 ? 0 : 10000 / read;
   }
 
   void calibrateAllSensors() {
@@ -40,8 +42,8 @@ public:
       delay(200);
     }
     for (uint8_t k = 0; k < S_QTD; k++) {
-      sensorReads[k] = sensorReads[k] / CALIB_RUNS;
-      sensors[k].whiteThreshold = sensorReads[k] - (sensorReads[k] * 0.1);
+      sensorReads[k] = sensorReads[k] == 0 ? 0 : sensorReads[k] / CALIB_RUNS;
+      sensors[k].whiteThreshold = sensorReads[k] + (sensorReads[k] * 8);
     }
   }
 
@@ -49,15 +51,21 @@ public:
     int16_t weightedSum = 0;
     uint8_t sumReadings = 0;
     bool isInMidle;
+    bool readSensor0 = 0;
+    bool readSensor15 = 0;
     for (uint8_t i = 0; i < S_QTD; i++) {
       uint16_t read = readSensor(i);
-      if (read <= sensors[i].whiteThreshold) {
+      if (read >= sensors[i].whiteThreshold) {
         weightedSum += read * S_WEIGHT[i];
         sumReadings++;
+        readSensor0 = (i == 0);
+        readSensor15 = (i == 15);
       }
     }
-    weightedSum = weightedSum != 0 ? weightedSum / sumReadings : 0;
-    weightedSum = weightedSum == 0 ? lastWeightedSum : weightedSum;
+    if(sumReadings <=1 && (readSensor0 || readSensor15)){
+      weightedSum = readSensor0 ? 800 * S_WEIGHT[0] :  800 * S_WEIGHT[15];
+    }
+    weightedSum = weightedSum != 0 ? (weightedSum / sumReadings) / 10 : lastWeightedSum;
     lastWeightedSum = weightedSum;
     return weightedSum;
   }

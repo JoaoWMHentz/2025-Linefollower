@@ -1,10 +1,10 @@
-#ifndef _PID_h
-#define _PID_h
+#ifndef __h
+#define _CONTROLUNIT_h
 
 #include "arduino.h"
 #include "Definitions.h"
 
-class PID {
+class ControlUnit {
 public:
 	float KP;
 	float KI;
@@ -22,9 +22,10 @@ public:
     }
     int D = error - PreviosError;
     PreviosError = error;
-    int output = (int)(KP * P) + (KI * Integral) + (KD * D);
-    return map(output, MAP_MAX_VALUE, -MAP_MAX_VALUE, MAP_MIN_VALUE, -MAP_MIN_VALUE);
+    return  (int)(KP * P) + (KI * Integral) + (KD * D);
   }
+
+  
 private:
 	int PreviosError;
 	double Integral;
