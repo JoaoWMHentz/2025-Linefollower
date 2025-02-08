@@ -16,6 +16,7 @@ long timePID = 0;
 bool robotRunning = false;
 bool lastButtonState = HIGH;
 unsigned long runTime = 0;
+unsigned long lastSensorTriggerTime = 0;
 
 bool initialValue = 1;
 
@@ -75,7 +76,7 @@ void debugEncoder() {
 
 void debugLoop() {
   for (uint8_t i = 0; i < S_QTD; i++) {
-    Serial.print(sensor.readSensor(i)); 
+    Serial.print(sensor.readSensor(i));
     Serial.print(" ");
   }
   Serial.print(sensor.calculateOffset());
@@ -87,7 +88,6 @@ void robotLoop() {
   robotRunning = blt.getRobotRun();
 
   if (robotRunning) {
-    locomotion.ledControl(0, 0, 1);
     locomotion.setPotSuc(blt.PotSuc);
     pid.KD = blt.Kd;
     pid.KP = blt.Kp;
@@ -98,26 +98,40 @@ void robotLoop() {
     locomotion.motorControl(blt.PWM + -output, blt.PWM + output);
   } else {
     locomotion.motorControl(0, 0);
-    locomotion.ledControl(0, 0, 0);
     locomotion.setPotSuc(0);
   }
 }
 
 void robotSecundaryTask(void* pvParameters) {
   for (;;) {
-    //blt.robotBLT();
     if ((millis() - runTime) >= 10 && robotRunning) {
-      
       runTime = millis();
-      if(initialValue){
+      if (initialValue) {
         locomotion.resetEncoders();
         initialValue = 0;
       }
       int leftEncoder = locomotion.readLeftEncoder();
       int rightEncoder = locomotion.readRightEncoder();
-      blt.recordRobotEncoder(leftEncoder, rightEncoder );
+      blt.recordRobotEncoder(leftEncoder, rightEncoder);
+
+
+      sensor.readSensorLeft();
+      sensor.readSensorRigth();
+
+      if (sensor.senLeft.alreadyRead && sensor.senRigth.alreadyRead && (runTime - ((sensor.senLeft.readTime + sensor.senRigth.readTime)/2)) <= 50) {
+        locomotion.ledControl(1, 0, 0);
+        lastSensorTriggerTime = millis();
+      } else if(sensor.senLeft.alreadyRead && (runTime - sensor.senLeft.readTime) <= 50) {
+          locomotion.ledControl(1, 1, 0);
+          lastSensorTriggerTime = millis();
+      } else if(sensor.senRigth.alreadyRead && (runTime - sensor.senRigth.readTime) <= 50) {
+        locomotion.ledControl(0, 1, 0);
+        lastSensorTriggerTime = millis();
+      }
+
+      if (millis() - lastSensorTriggerTime >= 100) {
+        locomotion.ledControl(0, 0, 1);
+      }
     }
   }
 }
-
-

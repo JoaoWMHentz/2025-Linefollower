@@ -10,9 +10,9 @@ public:
   BluetoothSerial SerialBlt;
   bool robotRun;
   float Kp, Kd, Ki, PWM, PotSuc;
-  int encoderLeftCounts[10000]
+  int encoderLeftCounts[10000];
   int encoderRigthCounts[10000];
-  int encoderRightIndex = 0
+  int encoderRightIndex = 0;
   int encoderLeftIndex = 0;
   
   static PeripheralUnit* instance;  
@@ -79,15 +79,23 @@ public:
     return robotRun;
   }
 
+  void ledControl(bool R, bool G, bool B) {
+    digitalWrite(LED_R, !R);
+    digitalWrite(LED_G, !G);
+    digitalWrite(LED_B, !B);
+  }
+
   void bltCommands(String bltData) {
     bltData.replace("\r", "\0");
     bltData.replace("\n", "\0");
 
     if (bltData.equalsIgnoreCase("stop")) {
-      if(robotRun){
+      bool robotRunState = robotRun;
+      robotRun = false;
+      ledControl(0, 0, 0);
+      if(robotRunState){
         recordSPIFFSencoderValue();
       }
-      robotRun = false;
       SerialBlt.printf("Robo parado %i", robotRun);
 
       return;
@@ -95,6 +103,7 @@ public:
 
     if (bltData.equalsIgnoreCase("run")) {
       robotRun = true;
+      ledControl(0, 0, 1);
       return;
     }
 

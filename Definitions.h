@@ -30,6 +30,9 @@ const int S_WEIGHT[16] = { -14, -10 ,-7 ,-5 ,-4 ,-3, -2, -1, 1, 2, 3, 4, 5, 7, 1
 
 #define THRESHOLD 1400
 
+#define LEFT_SENSOR 35
+#define RIGHT_SENSOR 34
+
 //PID
 
 #define SETPOINT 0

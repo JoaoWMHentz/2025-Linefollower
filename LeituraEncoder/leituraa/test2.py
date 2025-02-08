@@ -82,3 +82,4 @@ def processar_dados(arquivo, L=12.8, raio_roda=1.02):
 arquivo_dados = "dados.txt"
 
 processar_dados(arquivo_dados)
+    
