@@ -12,6 +12,7 @@ import serial  # Importando o módulo serial para capturar exceções
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt
+from graph_updater import GraphUpdater
 
 
 class SerialReaderThread(QThread):
@@ -43,7 +44,7 @@ class RobotControlApp(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Herbie - Control Panel")
-        self.setGeometry(100, 100, 1000, 600)
+        self.setGeometry(100, 100, 1600, 800)  # Aumenta a largura da janela
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
@@ -81,15 +82,28 @@ class RobotControlApp(QMainWindow):
         # Botões de Controle
         button_grid = QGridLayout()
         self.control_buttons = []
-        for i in range(2):  # 2 fileiras
-            for j in range(8):  # 8 botões por fileira
-                btn = QPushButton(f"Função {i*8 + j + 1}")
-                btn.clicked.connect(self.robot_action)
-                self.control_buttons.append(btn)
-                button_grid.addWidget(btn, i, j)
+
+        # Array de funções e comandos
+        functions = [
+            ("RUN", "RUN"),
+            ("STOP", "STOP"),
+            ("PRINT", "PRINT"),
+            ("PRINT ENCODERS", "PRTENC"),
+            ("KP:", "KP:"),
+            ("KD:", "KD;"),
+            ("KI:", "KI:"),
+            ("LOC PWM", "KPWM:"),
+            ("VENT PWM", "KPSUC:")
+        ]
+
+        for i, (name, command) in enumerate(functions):
+            btn = QPushButton(name)
+            btn.clicked.connect(lambda _, cmd=command: self.robot_action(cmd))
+            self.control_buttons.append(btn)
+            button_grid.addWidget(btn, i // 6, i % 6)  # Organiza em uma grade de 4 colunas
 
         left_layout.addLayout(button_grid)
-        main_layout.addWidget(left_frame)
+        main_layout.addWidget(left_frame, 3)  # Proporção menor para o left_frame
 
         # === Lado Direito: Monitoramento do Robô ===
         right_frame = QFrame()
@@ -97,11 +111,14 @@ class RobotControlApp(QMainWindow):
         right_layout = QVBoxLayout(right_frame)
 
         # Informações do Robô
+        info_grid = QGridLayout()
         self.info_labels = []
         for i in range(6):
             label = QLabel(f"Info {i+1}: ---")
             self.info_labels.append(label)
-            right_layout.addWidget(label)
+            info_grid.addWidget(label, i // 3, i % 3)  # Organiza em duas colunas
+
+        right_layout.addLayout(info_grid)
 
         # Gráficos
         self.figure1, self.ax1 = plt.subplots()
@@ -112,14 +129,11 @@ class RobotControlApp(QMainWindow):
         self.canvas2 = FigureCanvas(self.figure2)
         right_layout.addWidget(self.canvas2)
 
-        main_layout.addWidget(right_frame)
+        main_layout.addWidget(right_frame, 3)  # Proporção maior para o right_frame
 
         # Timer para atualização dos gráficos
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_graphs)
-        self.timer.start(1000)
-
-       
+        self.graph_updater = GraphUpdater(self.canvas1, self.canvas2, self.ax1, self.ax2)
+        self.graph_updater.data_updated.connect(self.update_info_labels)
 
         # Serial Connection
         self.serial_connection = None
@@ -155,36 +169,24 @@ class RobotControlApp(QMainWindow):
         """ Lê a resposta da conexão serial e atualiza o terminal. """
         SerialService.read_response(self.serial_connection, self.terminal)
 
-    def robot_action(self):
+    def robot_action(self, command):
         """ Envia um comando específico do botão clicado. """
-        sender = self.sender()
-        command = sender.text().replace("Função ", "CMD_")
         self.terminal.setTextColor(QColor(Qt.GlobalColor.blue))
         self.terminal.append(f"Executando: {command}")
         if self.serial_connection and self.serial_connection.is_open:
             self.serial_connection.write(f"{command}\n".encode())
 
-    def update_graphs(self):
-        """ Atualiza os gráficos com dados simulados. """
-        if len(self.data_x) > 20:
-            self.data_x.pop(0)
-            self.data_y1.pop(0)
-            self.data_y2.pop(0)
+    def update_info_labels(self, total_distance, min_radius, total_time, avg_speed):
+        """ Atualiza as informações do robô na interface do usuário. """
+        self.info_labels[0].setText(f"Distância Total: {total_distance:.2f} m")
+        self.info_labels[1].setText(f"Menor Raio de Curva: {min_radius:.2f} cm")
+        self.info_labels[2].setText(f"Tempo Total: {total_time:.2f} s")
+        self.info_labels[3].setText(f"Velocidade Média: {(avg_speed/100):.2f} m/s")
 
-        self.data_x.append(len(self.data_x))
-        self.data_y1.append(random.uniform(0, 10))
-        self.data_y2.append(random.uniform(5, 15))
-
-        self.ax1.clear()
-        self.ax1.plot(self.data_x, self.data_y1, marker='o', linestyle='-', color='b')
-        self.ax1.set_title("Gráfico 1")
-
-        self.ax2.clear()
-        self.ax2.plot(self.data_x, self.data_y2, marker='o', linestyle='-', color='r')
-        self.ax2.set_title("Gráfico 2")
-
-        self.canvas1.draw()
-        self.canvas2.draw()
+    def closeEvent(self, event):
+        """ Para a thread de atualização dos gráficos ao fechar a aplicação. """
+        self.graph_updater.stop()
+        event.accept()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

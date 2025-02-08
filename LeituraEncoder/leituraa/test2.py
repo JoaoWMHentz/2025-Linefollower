@@ -18,7 +18,7 @@ def desenhar_arco(ax, x, y, theta, R, L, cor='r'):
     
     ax.plot(arco_x, arco_y, linestyle='-', color=cor, alpha=0.6)
 
-def processar_dados(arquivo, L=12.8, raio_roda=1):
+def processar_dados(arquivo, L=12.8, raio_roda=1.02):
     
     fator_conversao = (2 * np.pi * raio_roda) / 64
     
@@ -66,8 +66,8 @@ def processar_dados(arquivo, L=12.8, raio_roda=1):
                         else:
                             R = 1e6
                         print(R)
-                        if(R < 20 and R > -20):
-                            desenhar_arco(ax, x, y, theta, R, 5)
+                        
+                        desenhar_arco(ax, x, y, theta, R, 5)
                         distancia_acumulada = 0  
 
                     x, y, theta = x_novo, y_novo, theta_novo
@@ -75,7 +75,7 @@ def processar_dados(arquivo, L=12.8, raio_roda=1):
                 except ValueError:
                     print("Erro")
 
-    ax.plot(trajetoria_x, trajetoria_y, linestyle='-', color='b')
+    #ax.plot(trajetoria_x, trajetoria_y, linestyle='-', color='b')
     ax.legend()
     plt.show()
 
