@@ -79,6 +79,16 @@ public:
     return robotRun;
   }
 
+  void robotStop() {
+      bool robotRunState = robotRun;
+      robotRun = false;
+      ledControl(0, 0, 0);
+      if(robotRunState){
+        recordSPIFFSencoderValue();
+      }
+      SerialBlt.printf("Robo parado %i", robotRun);
+  }
+
   void ledControl(bool R, bool G, bool B) {
     digitalWrite(LED_R, !R);
     digitalWrite(LED_G, !G);
@@ -90,14 +100,7 @@ public:
     bltData.replace("\n", "\0");
 
     if (bltData.equalsIgnoreCase("stop")) {
-      bool robotRunState = robotRun;
-      robotRun = false;
-      ledControl(0, 0, 0);
-      if(robotRunState){
-        recordSPIFFSencoderValue();
-      }
-      SerialBlt.printf("Robo parado %i", robotRun);
-
+      robotStop();
       return;
     }
 

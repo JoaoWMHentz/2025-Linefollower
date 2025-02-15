@@ -89,13 +89,10 @@ public:
   }
 
   void brake() {
-    if ((millis() - brakeTimer) > 100) {
-      if (targetVelocityLeft > 0 || targetVelocityRight > 0) {
-        motorControl(targetVelocityLeft - 20, targetVelocityRight - 20);
-      } else {
-        motorControl(0, 0);
-      }
-    }
+    ledcWrite(PWM_CHN_1, 1024);
+    ledcWrite(PWM_CHN_2, 1024);
+    ledcWrite(PWM_CHN_3, 1024);
+    ledcWrite(PWM_CHN_4, 1024);
   }
 
   void setupEncoder() {

@@ -5,7 +5,7 @@
 #include "PeripheralUnit.h"
 #include <BluetoothSerial.h>
 
-#define BUTTON_PIN 4
+
 
 LocomotionUnit locomotion = LocomotionUnit();
 SensorUnit sensor = SensorUnit();
@@ -17,6 +17,8 @@ bool robotRunning = false;
 bool lastButtonState = HIGH;
 unsigned long runTime = 0;
 unsigned long lastSensorTriggerTime = 0;
+int cruzamento_count = 0;
+long delayToStop = 0;
 
 bool initialValue = 1;
 
@@ -38,10 +40,10 @@ void setup() {
   Serial.begin(115200);
   delay(2000);
   locomotion.setupLed();
-  locomotion.ledControl(0, 1, 0);
   sensor.begin();
+  pinMode(BUTTON_PIN, INPUT);
   sensor.calibrateAllSensors();
-  locomotion.ledControl(0, 0, 0);
+  printWhiteThresholds();
   locomotion.begin();
   locomotion.setupSuc();
   locomotion.setupEncoder();
@@ -49,7 +51,6 @@ void setup() {
 
   blt.initializeSPIFFS();
   setupRobotTask();
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
 }
 
 void printWhiteThresholds() {
@@ -60,10 +61,18 @@ void printWhiteThresholds() {
     Serial.print(": ");
     Serial.println(sensor.sensors[i].whiteThreshold);
   }
+
+  Serial.println("Black Thresholds of Sensors:");
+  for (uint8_t i = 0; i < S_QTD; i++) {
+    Serial.print("Sensor ");
+    Serial.print(i);
+    Serial.print(": ");
+    Serial.println(sensor.sensors[i].whiteThreshold);
+  }
 }
 
 void loop() {
-  //debugEncoder();
+  //debugLoop();
   robotLoop();
 }
 
@@ -97,8 +106,10 @@ void robotLoop() {
     if (output < -MAX_PWM) output = -MAX_PWM;
     locomotion.motorControl(blt.PWM + -output, blt.PWM + output);
   } else {
-    locomotion.motorControl(0, 0);
+    locomotion.brake();
     locomotion.setPotSuc(0);
+    cruzamento_count = 0;
+    delayToStop = 0;
   }
 }
 
@@ -114,22 +125,29 @@ void robotSecundaryTask(void* pvParameters) {
       int rightEncoder = locomotion.readRightEncoder();
       blt.recordRobotEncoder(leftEncoder, rightEncoder);
 
-
-      sensor.readSensorLeft();
-      sensor.readSensorRigth();
-
-      if (sensor.senLeft.alreadyRead && sensor.senRigth.alreadyRead && (runTime - ((sensor.senLeft.readTime + sensor.senRigth.readTime)/2)) <= 50) {
+      if(sensor.readSensorLeft() && sensor.isInMidle) {
         locomotion.ledControl(1, 0, 0);
-        lastSensorTriggerTime = millis();
-      } else if(sensor.senLeft.alreadyRead && (runTime - sensor.senLeft.readTime) <= 50) {
-          locomotion.ledControl(1, 1, 0);
-          lastSensorTriggerTime = millis();
-      } else if(sensor.senRigth.alreadyRead && (runTime - sensor.senRigth.readTime) <= 50) {
-        locomotion.ledControl(0, 1, 0);
         lastSensorTriggerTime = millis();
       }
 
-      if (millis() - lastSensorTriggerTime >= 100) {
+      if(sensor.readSensorRigth() && sensor.isInMidle) {
+        locomotion.ledControl(0, 1, 0);
+        lastSensorTriggerTime = millis();
+        cruzamento_count ++;
+
+      }
+      
+
+      if(cruzamento_count >= NUM_CRUZAMENTOS){
+        if(delayToStop == 0){
+          delayToStop = millis();
+        }
+        if((millis() - delayToStop) > 200){
+          blt.robotStop();
+        }
+      }
+
+      if (millis() - lastSensorTriggerTime >= 200 && robotRunning) {
         locomotion.ledControl(0, 0, 1);
       }
     }

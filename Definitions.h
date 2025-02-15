@@ -30,9 +30,9 @@ const int S_WEIGHT[16] = { -14, -10 ,-7 ,-5 ,-4 ,-3, -2, -1, 1, 2, 3, 4, 5, 7, 1
 
 #define THRESHOLD 1400
 
-#define LEFT_SENSOR 35
-#define RIGHT_SENSOR 34
-
+#define LEFT_SENSOR 34
+#define RIGHT_SENSOR 35
+#define NUM_CRUZAMENTOS 12
 //PID
 
 #define SETPOINT 0
@@ -41,6 +41,7 @@ const int S_WEIGHT[16] = { -14, -10 ,-7 ,-5 ,-4 ,-3, -2, -1, 1, 2, 3, 4, 5, 7, 1
 #define MAP_MIN_VALUE -1024
 #define MAP_MAX_VALUE 1024
 #define MAX_PWM 1024
+#define BUTTON_PIN 4
 
 //BLUETOOTH
 
