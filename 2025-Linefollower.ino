@@ -5,8 +5,6 @@
 #include "PeripheralUnit.h"
 #include <BluetoothSerial.h>
 
-
-
 LocomotionUnit locomotion = LocomotionUnit();
 SensorUnit sensor = SensorUnit();
 ControlUnit pid = ControlUnit();
@@ -42,7 +40,9 @@ void setup() {
   locomotion.setupLed();
   sensor.begin();
   pinMode(BUTTON_PIN, INPUT);
+  locomotion.ledControl(0, 1, 0);
   sensor.calibrateAllSensors();
+  locomotion.ledControl(0, 0, 0);
   printWhiteThresholds();
   locomotion.begin();
   locomotion.setupSuc();
@@ -142,7 +142,7 @@ void robotSecundaryTask(void* pvParameters) {
         if(delayToStop == 0){
           delayToStop = millis();
         }
-        if((millis() - delayToStop) > 200){
+        if((millis() - delayToStop) > 150){
           blt.robotStop();
         }
       }

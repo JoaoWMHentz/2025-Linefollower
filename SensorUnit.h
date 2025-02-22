@@ -50,63 +50,17 @@ public:
   }
 
   void calibrateAllSensors() {
-    uint16_t sensorReads[S_QTD];
-    memset(sensorReads, 0, S_QTD);
-
-    ledControl(0, 1, 0);
-
+    uint16_t sensorReads[S_QTD] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     for (uint8_t i = 0; i < CALIB_RUNS; i++) {
       for (uint8_t j = 0; j < S_QTD; j++) {
         sensorReads[j] += readSensor(j);
       }
       delay(200);
     }
-
     for (uint8_t k = 0; k < S_QTD; k++) {
-      sensorReads[k] /= CALIB_RUNS;
-      sensors[k].blackThreshold = sensorReads[k] + (sensorReads[k] * 0.6);
-      
+      sensorReads[k] = sensorReads[k] == 0 ? 0 : sensorReads[k] / CALIB_RUNS;
+      sensors[k].whiteThreshold = sensorReads[k] + (sensorReads[k] * 8);
     }
-
-    bool buttonPressed = false;
-    unsigned long lastBlink = 0;
-    bool ledState = false;
-    while (!buttonPressed) {
-      if (digitalRead(BUTTON_PIN) == LOW) {
-        buttonPressed = true;
-      }
-      if (millis() - lastBlink >= 300) {
-        lastBlink = millis();
-        ledState = !ledState;
-        ledControl(ledState, 0, 0);
-      }
-    }
-    unsigned long startTime = millis();
-    while (millis() - startTime < 2000) {
-      if (millis() - lastBlink >= 200) {
-        lastBlink = millis();
-        ledState = !ledState;
-        ledControl(ledState, 0, 0);
-      }
-    }
-
-    ledControl(0, 1, 0);
-    delay(500);
-
-    memset(sensorReads, 0, S_QTD);
-    for (uint8_t i = 0; i < CALIB_RUNS; i++) {
-      for (uint8_t j = 0; j < S_QTD; j++) {
-        sensorReads[j] += readSensor(j);
-      }
-      delay(200);
-    }
-
-    for (uint8_t k = 0; k < S_QTD; k++) {
-      sensorReads[k] /= CALIB_RUNS;
-      sensors[k].blackThreshold = sensorReads[k] - (sensorReads[k] * 0.2);
-    }
-
-    ledControl(0, 0, 0);
   }
 
   int calculateOffset() {
@@ -116,7 +70,7 @@ public:
     bool readSensor15 = 0;
     for (uint8_t i = 0; i < S_QTD; i++) {
       uint16_t read = readSensor(i);
-      if (read >= sensors[i].blackThreshold) {
+      if (read >= sensors[i].whiteThreshold) {
         weightedSum += read * S_WEIGHT[i];
         sumReadings++;
         readSensor0 = (i == 0);
@@ -125,14 +79,14 @@ public:
     }
 
     if (sumReadings <= 1 && (readSensor0 || readSensor15)) {
-      weightedSum = readSensor0 ? 800 * S_WEIGHT[0] : 800 * S_WEIGHT[15];
+      weightedSum = readSensor0 ? 1000 * S_WEIGHT[0] : 1000 * S_WEIGHT[15];
     }
     weightedSum = weightedSum != 0 ? (weightedSum / sumReadings) / 10 : lastWeightedSum;
     lastWeightedSum = weightedSum;
-    if (sumReadings >= 10) {
+    if (sumReadings >= 8) {
       weightedSum = 0;
     }
-    isInMidle = weightedSum <= 200 && weightedSum >= -200;
+    isInMidle = weightedSum <= 250 && weightedSum >= -250;
 
     return weightedSum;
   }

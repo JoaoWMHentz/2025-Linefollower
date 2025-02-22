@@ -26,7 +26,7 @@
 #define CALIB_RUNS 32
 const int S_PINS[4] = { 19, 18, 17, 16 };
 
-const int S_WEIGHT[16] = { -14, -10 ,-7 ,-5 ,-4 ,-3, -2, -1, 1, 2, 3, 4, 5, 7, 10, 14 };
+const int S_WEIGHT[16] = { -17, -13 ,-10 ,-7 ,-5 ,-3, -2, -1, 1, 2, 3, 5, 7, 10, 13,17  };
 
 #define THRESHOLD 1400
 
