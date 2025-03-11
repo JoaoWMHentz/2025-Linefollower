@@ -1,7 +1,7 @@
 import serial
 
 # Configuração da porta serial
-porta = 'COM11'  # Nome da porta serial no Windows
+porta = 'COM10'  # Nome da porta serial no Windows
 baud_rate = 115200  # Taxa de transmissão
 
 try:

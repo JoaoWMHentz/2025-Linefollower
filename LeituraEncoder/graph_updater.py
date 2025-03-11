@@ -42,7 +42,7 @@ class GraphUpdater(QObject):
         if -15 < R < 15:
             ax.text(cx, cy, f'R={R:.2f}', color='black', fontsize=8, ha='center')
         
-    def processar_dados(self, arquivo, L=12.8, raio_roda=1.1):
+    def processar_dados(self, arquivo, L=12.8, raio_roda=1.05):
         fator_conversao = (2 * np.pi * raio_roda) / 64
         x, y, theta = 0, 0, 0
         trajetoria_x, trajetoria_y = [x], [y]

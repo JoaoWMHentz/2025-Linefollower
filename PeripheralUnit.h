@@ -83,9 +83,12 @@ public:
       bool robotRunState = robotRun;
       robotRun = false;
       ledControl(0, 0, 0);
+      
       if(robotRunState){
         recordSPIFFSencoderValue();
       }
+      memset(encoderLeftCounts, 0, sizeof(encoderLeftCounts));
+      memset(encoderRigthCounts, 0, sizeof(encoderRigthCounts));
       SerialBlt.printf("Robo parado %i", robotRun);
   }
 
@@ -202,21 +205,66 @@ public:
     encoderRightIndex++;
   }
 
-  void recordSPIFFSencoderValue() {
-    File file = SPIFFS.open("/encoder.txt", FILE_APPEND);
-    if (file) {
-      for (int i = 0; i < 10000; i++) {
-        if (encoderLeftCounts[i] == 0 && encoderRigthCounts[i] == 0) {
-          continue;
-        }
-        file.print(encoderLeftCounts[i]);
-        file.print(":");
-        file.println(encoderRigthCounts[i]);
-      }
-      file.close();
+   struct Movimento {
+    double x;
+    double y;
+    double theta;
+    double min_radius;
+  };
+
+  double lastTheta = 0;
+
+  Movimento calcular_movimento(int pL, int pR, double lastLeft, double lastRight, double L, double fator_conversao) {
+    Movimento resultado;
+    
+    double dL = (pL) * fator_conversao;
+    double dR = (pR) * fator_conversao;
+    
+    double dC = (dL + dR) / 2;
+    double dTheta = (dR - dL) / L;
+
+    resultado.x = dC * cos(dTheta);
+    resultado.y = dC * sin(dTheta);
+    resultado.theta = dTheta;
+
+    if (fabs(dR - dL) > 1e-6) {
+      resultado.min_radius = (L / 2) * ((dL + dR) / (dR - dL));
     } else {
-      SerialBlt.println("Falha ao abrir o arquivo encoder.txt.");
+      resultado.min_radius = 1e6;
     }
+
+    return resultado;
+  }
+
+  void recordSPIFFSencoderValue() {
+    if (encoderLeftIndex < 2 || encoderRightIndex < 2) {
+      SerialBlt.println("Dados insuficientes para calcular deslocamento.");
+      return;
+    }
+
+    File file = SPIFFS.open("/encoder.txt", FILE_APPEND);
+    if (!file) {
+      SerialBlt.println("Falha ao abrir o arquivo encoder.txt.");
+      return;
+    }
+
+    double L = 12.8;
+    double fator_conversao = (2 * M_PI * 1.05) / 64;
+
+    for (int i = 1; i < encoderLeftIndex; i++) {
+      int pL = encoderLeftCounts[i];
+      int pR = encoderRigthCounts[i];
+      int lastLeft = encoderLeftCounts[i - 1];
+      int lastRight = encoderRigthCounts[i - 1];
+
+      Movimento mov = calcular_movimento(pL, pR, lastLeft, lastRight, L, fator_conversao);
+
+      file.printf("%d: %d: %f: %f: %f\n",
+                  pL, pR, mov.x, mov.y, mov.theta);
+    }
+
+    file.close();
+    SerialBlt.println("Dados do movimento gravados no SPIFFS.");
   }
 
   void clearFileContent(const char* fileName) {
